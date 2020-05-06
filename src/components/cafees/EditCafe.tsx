@@ -5,7 +5,7 @@ import Axios from 'axios';
 
 function EditCafe() {
     const history = useHistory();
-    interface AxiosResult {
+    interface AxiosResultCafee {
         data: {
             data: {
                 name: string, 
@@ -26,16 +26,37 @@ function EditCafe() {
             }
         }
     }
+    interface AxiosResultOwners {
+        data: {
+            data: {
+                first_name: string,
+                last_name: string,
+                email: string,
+                phone: string,
+                id: number
+            }[]
+        }
+    }
     const { cafeId } = useParams();
-    const [cafe, setCafe] = useState<false | AxiosResult["data"]["data"]>(false);
+    const [cafe, setCafe] = useState<false | AxiosResultCafee["data"]["data"]>(false);
+    const [owners, setOwners] = useState<AxiosResultOwners["data"]["data"]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const getCafe = async () => {
             try {
-                const result: AxiosResult = await Axios(`http://localhost:3001/api/cafees/${cafeId}`);
+                const result: AxiosResultCafee = await Axios(`http://localhost:3001/api/cafees/${cafeId}`);
                 setCafe(result.data.data);
 
+            } catch (error) {
+                console.error(error)
+            }
+        }
+        
+        const getOwners = async () => {
+            try {
+                const result: AxiosResultOwners = await Axios('http://localhost:3001/api/owners');
+                setOwners(result.data.data)
             } catch (error) {
                 console.error(error)
             } finally {
@@ -43,6 +64,7 @@ function EditCafe() {
             }
         }
         getCafe();
+        getOwners();
     }, [cafeId]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,10 +76,25 @@ function EditCafe() {
         setCafe(cafeWithNewValue)
     }
 
+    const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const makeIdANumber = e.target.value !== '' 
+            ? Number(e.target.value)
+            : null
+        const cafeWithNewOwner: any = {
+            ...cafe, 
+            [e.target.id]: makeIdANumber
+        }
+        setCafe(cafeWithNewOwner)
+    }
+
     const updateCafe = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        await Axios.put(`http://localhost:3001/api/cafees/${cafeId}`, cafe);
-        history.push(`/cafees/${cafeId}`)
+        try {
+            await Axios.put(`http://localhost:3001/api/cafees/${cafeId}`, cafe);
+            history.push(`/cafees/${cafeId}`)
+        } catch (error) {
+            console.error(error)
+        }
     }
     
     const handleDelete = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -101,11 +138,11 @@ function EditCafe() {
 
                         <div className="form-group">
                             <label htmlFor="owner_id">Lägg till ägare</label>
-                            <select className="form-control" id="owner_id" name="owner_id">
+                            <select className="form-control" id="owner_id" name="owner_id" onChange={handleSelect}>
                                 <option value="">Okänd ägare</option>
-                                {cafe.owner
-                                ? <option defaultValue={cafe.owner.id}>{cafe.owner.first_name} {cafe.owner.last_name}</option>
-                                : <option defaultValue="">Okänd ägare</option> 
+                                {owners.map((owner, index) => {
+                                    return <option key={index} value={owner.id}>{owner.first_name} {owner.last_name}</option>
+                                    })
                                 }
                             </select>
                         </div>
